@@ -1,0 +1,35 @@
+name: Deploy to Lambda
+
+on:
+  push:
+    branches:
+      - main  # triggers on pushes to main branch
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Install dependencies and zip
+        run: |
+          python -m pip install --upgrade pip
+          # Only if you have dependencies
+          if [ -f requirements.txt ]; then pip install -r requirements.txt -t package/; fi
+          cp -r *.py package/
+          cd package && zip -r ../function.zip .
+
+      - name: Deploy Lambda
+        run: |
+          aws lambda update-function-code \
+            --function-name arn:aws:lambda:us-east-1:918689941657:function:MyLambdaFunction \
+            --zip-file fileb://function.zip
